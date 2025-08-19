@@ -93,7 +93,24 @@
         </repository>
     </distributionManagement>
 
-    <!-- 发布 ：mvn clean install deploy -P release -->
+    <!-- 发布 ：mvn clean install deploy -P release
+    1.执行命令会生成 mqtt-tool-spring-boot-starter-1.0.0.jar.asc/mqtt-tool-spring-boot-starter-1.0.0.pom.asc/mqtt-tool-spring-boot-starter-1.0.0-javadoc.jar.asc/mqtt-tool-spring-boot-starter-1.0.0-sources.jar.asc 签名文件
+    2.win打开PowerShell执行命令生成md5与sha1文件
+        Get-FileHash -Algorithm MD5 .\mqtt-tool-spring-boot-starter-1.0.0.pom | Select-Object -ExpandProperty Hash | Out-File -Encoding ASCII .\mqtt-tool-spring-boot-starter-1.0.0.pom.md5
+        Get-FileHash -Algorithm SHA1 .\mqtt-tool-spring-boot-starter-1.0.0.pom | Select-Object -ExpandProperty Hash | Out-File -Encoding ASCII .\mqtt-tool-spring-boot-starter-1.0.0.pom.sha1
+
+        Get-FileHash -Algorithm MD5 .\mqtt-tool-spring-boot-starter-1.0.0.jar | Select-Object -ExpandProperty Hash | Out-File -Encoding ASCII .\mqtt-tool-spring-boot-starter-1.0.0.jar.md5
+        Get-FileHash -Algorithm SHA1 .\mqtt-tool-spring-boot-starter-1.0.0.jar | Select-Object -ExpandProperty Hash | Out-File -Encoding ASCII .\mqtt-tool-spring-boot-starter-1.0.0.jar.sha1
+
+        Get-FileHash -Algorithm MD5 .\mqtt-tool-spring-boot-starter-1.0.0-javadoc.jar | Select-Object -ExpandProperty Hash | Out-File -Encoding ASCII .\mqtt-tool-spring-boot-starter-1.0.0-javadoc.jar.md5
+        Get-FileHash -Algorithm SHA1 .\mqtt-tool-spring-boot-starter-1.0.0-javadoc.jar | Select-Object -ExpandProperty Hash | Out-File -Encoding ASCII .\mqtt-tool-spring-boot-starter-1.0.0-javadoc.jar.sha1
+
+        Get-FileHash -Algorithm MD5 .\mqtt-tool-spring-boot-starter-1.0.0-sources.jar | Select-Object -ExpandProperty Hash | Out-File -Encoding ASCII .\mqtt-tool-spring-boot-starter-1.0.0-sources.jar.md5
+        Get-FileHash -Algorithm SHA1 .\mqtt-tool-spring-boot-starter-1.0.0-sources.jar | Select-Object -ExpandProperty Hash | Out-File -Encoding ASCII .\mqtt-tool-spring-boot-starter-1.0.0-sources.jar.sha1
+    3.按照命名空间格式创建目录 比如我命名空间是io.github.chichengyu，完整目录结构为：D:\1111\io\github\chichengyu\mqtt-tool-spring-boot-starter\1.0.0，再把步骤1生成的target文件复制过来
+    4.将整个文件生成 mqtt-tool-spring-boot-starter.zip包
+    5.登陆 https://central.sonatype.com/publishing 捆绑上传：名称格式：io.github.chichengyu:mqtt-tool-spring-boot-starter:1.0.0，然后上传mqtt-tool-spring-boot-starter.zip
+    -->
     <build>
         <plugins>
             <plugin>
