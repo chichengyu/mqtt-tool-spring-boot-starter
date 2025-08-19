@@ -93,6 +93,14 @@
         </repository>
     </distributionManagement>
 
+    <!--
+        gpg公钥上传失败，可手动上传 ，地址：https://keys.openpgp.org/，
+        1.安装gpg-win4之后，打开 Kleopatra
+        2.找到之前生成公钥时的名称与邮箱，看看有没有认证，没有认证就选中，点击上面认证
+        3.认证完成后，选择右键导出，然后打开 https://keys.openpgp.org/ ，点击upload进行上传
+        4.上传完成后，搜索栏，输入生成公钥时的邮箱，进行验证是否上传
+    -->
+
     <!-- 发布 ：mvn clean install deploy -P release
     1.执行命令会生成 mqtt-tool-spring-boot-starter-1.0.0.jar.asc/mqtt-tool-spring-boot-starter-1.0.0.pom.asc/mqtt-tool-spring-boot-starter-1.0.0-javadoc.jar.asc/mqtt-tool-spring-boot-starter-1.0.0-sources.jar.asc 签名文件
     2.win打开PowerShell执行命令生成md5与sha1文件
