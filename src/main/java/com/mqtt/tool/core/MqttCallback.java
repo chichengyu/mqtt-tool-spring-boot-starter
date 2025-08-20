@@ -83,7 +83,7 @@ public class MqttCallback implements MqttCallbackExtended {
                 IMqttTopicMessageHandler<Object> targetClass = handlerContainer.get(topic);
                 Class<?> genericClass = getGenericClass(targetClass);// 获取泛型
                 Object body = coverBody(msgContent, genericClass);
-                targetClass.messageArrived(topic, body); //执行处理消息的逻辑
+                targetClass.messageArrived(topic, body, message); //执行处理消息的逻辑
             } catch (Exception e) {
                 LOGGER.error("Message distribution failed,{}",e);
             } finally {
@@ -99,8 +99,11 @@ public class MqttCallback implements MqttCallbackExtended {
     @Override
     public void deliveryComplete(IMqttDeliveryToken iMqttDeliveryToken) {
         //当消息的传递完成并收到所有确认时调用该方法
+        // 返回操作是否已完成。*<p>在操作成功完成的情况下和失败的情况下都将返回True。
+        // 如果操作失败，{iMqttDeliveryToken.getException()}将*为非空。*</p>*
         try {
             String[] topics = iMqttDeliveryToken.getTopics();
+            LOGGER.info("deliveryComplete[topic:{}] action has finished:{}",topics[0],iMqttDeliveryToken.isComplete());
             MqttMessage mqttMessage = iMqttDeliveryToken.getMessage();
             if(mqttMessage != null){
                 String payload = new String(mqttMessage.getPayload());
@@ -109,13 +112,14 @@ public class MqttCallback implements MqttCallbackExtended {
                     IMqttTopicMessageHandler<Object> targetClass = handlerContainer.get(topics[0]);
                     Class<?> genericClass = getGenericClass(targetClass);// 获取泛型
                     Object body = coverBody(payload, genericClass);
-                    targetClass.deliveryComplete(topics[0], body);
+                    targetClass.deliveryComplete(topics[0], body,iMqttDeliveryToken);
                 }
             }else{
-                LOGGER.info("deliveryComplete:mqttMessage=null");
+                LOGGER.info("deliveryComplete[topic:{}]:mqttMessage=null",topics[0]);
             }
         }catch (Exception e){
-            LOGGER.error("MQTT deliveryComplete Exception,error:{}",e);
+            String[] topics = iMqttDeliveryToken.getTopics();
+            LOGGER.error("MQTT deliveryComplete[topic:{}] Exception,error:{}",topics[0],e);
         }
     }
 
