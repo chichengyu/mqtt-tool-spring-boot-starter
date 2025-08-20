@@ -9,6 +9,12 @@ public class MessageBody {
      * content内容
      */
     private Object data;
+
+    /**
+     * 是否发送原始数据(只包含发送的数据，不包含消息链id/qos/reatined等等)
+     */
+    private boolean rawDataSend = true;
+
     /**
      * 消息链id
      */
@@ -50,6 +56,14 @@ public class MessageBody {
 
     public void setData(Object data) {
         this.data = data;
+    }
+
+    public boolean isRawDataSend() {
+        return rawDataSend;
+    }
+
+    public void setRawDataSend(boolean rawDataSend) {
+        this.rawDataSend = rawDataSend;
     }
 
     public String getChainID() {

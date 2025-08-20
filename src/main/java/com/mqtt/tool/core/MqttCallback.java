@@ -21,7 +21,11 @@ import java.util.concurrent.ConcurrentHashMap;
 public class MqttCallback implements MqttCallbackExtended {
     private static Logger LOGGER = LoggerFactory.getLogger(MqttCallback.class);
 
-    public static ConcurrentHashMap<String,IMqttTopicMessageHandler<Object>> container = new ConcurrentHashMap<>();
+    private static ConcurrentHashMap<String,IMqttTopicMessageHandler<Object>> handlerContainer = new ConcurrentHashMap<>();
+
+    public static ConcurrentHashMap<String,IMqttTopicMessageHandler<Object>> getHandlerContainer(){
+        return MqttCallback.handlerContainer;
+    }
 
     /**
      * MQTT连接成功
@@ -46,7 +50,7 @@ public class MqttCallback implements MqttCallbackExtended {
                     if (!"".equals(mqttTopic.value())){
                         MqttTemplate.getMqttTemplate().subscribe(mqttTopic.value(),mqttTopic.queue(),mqttTopic.share(),mqttTopic.group());
                         IMqttTopicMessageHandler<Object> targetClass = (IMqttTopicMessageHandler<Object>) ContextConfig.applicationContext.getBean(beanName);
-                        container.put(mqttTopic.value(),targetClass);
+                        handlerContainer.put(mqttTopic.value(),targetClass);
                         msgTopic.append(beanName).append(".");
                     }
                 }
@@ -74,9 +78,9 @@ public class MqttCallback implements MqttCallbackExtended {
     public void messageArrived(String topic, MqttMessage message) throws Exception {
         String msgContent = new String(message.getPayload());//获取emq发过来的消息体
         LOGGER.info("messageArrived==>Topic:{},Id:{},Qos:{},Retained:{},Message:{}",topic,message.getId(),message.getQos(),message.isRetained(),msgContent);
-        if (container.containsKey(topic)){
+        if (handlerContainer.containsKey(topic)){
             try {
-                IMqttTopicMessageHandler<Object> targetClass = container.get(topic);
+                IMqttTopicMessageHandler<Object> targetClass = handlerContainer.get(topic);
                 Class<?> genericClass = getGenericClass(targetClass);// 获取泛型
                 Object body = coverBody(msgContent, genericClass);
                 targetClass.messageArrived(topic, body); //执行处理消息的逻辑
@@ -101,9 +105,8 @@ public class MqttCallback implements MqttCallbackExtended {
             if(mqttMessage != null){
                 String payload = new String(mqttMessage.getPayload());
                 LOGGER.info("deliveryComplete==>Topic:{},Id:{},Qos:{},Retained:{},Message:{}",topics[0],mqttMessage.getId(),mqttMessage.getQos(),mqttMessage.isRetained(),payload);
-                LOGGER.info("deliveryComplete:{}",payload);
-                if (container.containsKey(topics[0])){
-                    IMqttTopicMessageHandler<Object> targetClass = container.get(topics[0]);
+                if (handlerContainer.containsKey(topics[0])){
+                    IMqttTopicMessageHandler<Object> targetClass = handlerContainer.get(topics[0]);
                     Class<?> genericClass = getGenericClass(targetClass);// 获取泛型
                     Object body = coverBody(payload, genericClass);
                     targetClass.deliveryComplete(topics[0], body);
@@ -126,7 +129,7 @@ public class MqttCallback implements MqttCallbackExtended {
     private Object coverBody(String msgContent, Class<?> genericClass) throws IOException {
         Object body = null;
         if(isSendBody(msgContent)){
-            LOGGER.info("MessageBody data----");
+            LOGGER.info("MessageBody data:{}",msgContent);
             MessageBody messageBody = JSON.parseObject(msgContent,  MessageBody.class ) ;
             String chainID = messageBody.getChainID();
             //将链路全局id传入到ThreadLocal中
@@ -139,7 +142,7 @@ public class MqttCallback implements MqttCallbackExtended {
                 body = JSON.parseObject(msgJson, genericClass) ;
             }
         }else{
-            LOGGER.info("Not MessageBody type data");
+            LOGGER.info("Not MessageBody type data:{}",msgContent);
             //非MessageBody---直接处理
             body = JSON.parseObject(msgContent, genericClass) ;
         }

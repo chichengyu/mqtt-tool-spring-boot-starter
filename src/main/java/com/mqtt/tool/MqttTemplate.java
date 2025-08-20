@@ -75,12 +75,16 @@ public class MqttTemplate extends MqttTemplateImpl {
     public boolean publish(String topic, MessageBody messageBody) {
         String payload = "";
         try {
-            String chainID = MqttConttext.get();
-            if(MqttConttext.get() == null) {
-                chainID = UUIDUtils.getUUID();
+            if (!messageBody.isRawDataSend()){
+                String chainID = MqttConttext.get();
+                if(MqttConttext.get() == null) {
+                    chainID = UUIDUtils.getUUID();
+                }
+                messageBody.setChainID(chainID);
+                payload = JSON.toJSONString(messageBody);
+            }else {
+                payload = JSON.toJSONString(messageBody.getData());
             }
-            messageBody.setChainID(chainID);
-            payload = JSON.toJSONString(messageBody);
             MqttMessage mqttMessage = new MqttMessage();
             mqttMessage.setPayload(payload.getBytes());
             mqttMessage.setQos(messageBody.getQos());
@@ -219,10 +223,10 @@ public class MqttTemplate extends MqttTemplateImpl {
             String topicFilter = getTopic(topic, queue, share,group);
             mqttClient.subscribe(topicFilter);
             if (handler != null){
-                if (MqttCallback.container.containsKey(topic)){
+                if (MqttCallback.getHandlerContainer().containsKey(topic)){
                     LOGGER.info("topic:{} Already subscribed, IMqttTopicMessageHandler will overwrite",topic);
                 }
-                MqttCallback.container.put(topic,(IMqttTopicMessageHandler<Object>)handler);
+                MqttCallback.getHandlerContainer().put(topic,(IMqttTopicMessageHandler<Object>)handler);
             }
             LOGGER.info("subscribe topic:{} successful",topic);
             return true;
@@ -275,9 +279,9 @@ public class MqttTemplate extends MqttTemplateImpl {
             String mqttTopic = getTopic(topic, queue, share, group);
             LOGGER.info(">>>>>>>>>>>>>>subscribe topic:" + mqttTopic);
             mqttClient.unsubscribe(mqttTopic);
-            IMqttTopicMessageHandler<Object> rs = MqttCallback.container.remove(topic);
+            IMqttTopicMessageHandler<Object> rs = MqttCallback.getHandlerContainer().remove(topic);
             if (rs != null){
-                LOGGER.info("topic:{} handler Removed already",topic);
+                LOGGER.info("topic:{} IMqttTopicMessageHandler Removed already",topic);
             }
             LOGGER.info("unSubscribe topic:{} successful",topic);
             return true;
