@@ -4,7 +4,7 @@
         <img src="https://img.shields.io/badge/%E4%BD%9C%E8%80%85-%E5%B0%8F%E6%B1%A0-%23129e50" alt="MIT License" />
     </a>
     <a href="https://github.com/chichengyu/mqtt-tool-spring-boot-starter">
-        <img src="https://img.shields.io/badge/last version-1.0.0-green" alt="version-1.0.0" />
+        <img src="https://img.shields.io/badge/last version-1.1.0-green" alt="version-1.1.0" />
     </a>
 </p>
 
@@ -17,7 +17,7 @@
 <dependency>
     <groupId>io.github.chichengyu</groupId>
     <artifactId>mqtt-tool-spring-boot-starter</artifactId>
-    <version>1.0.0</version>
+    <version>1.1.0</version>
 </dependency>
 ```
 
