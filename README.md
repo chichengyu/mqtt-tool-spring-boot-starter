@@ -35,6 +35,7 @@ public class MqttClientConfig {
         mqttConfig.setUsername("test");
         mqttConfig.setPassword("123456");
         mqttConfig.setClientId("xxxxxxxxxxxx");
+        mqttConfig.setExecutor("线程池");
         return mqttConfig;
     }
 }

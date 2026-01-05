@@ -118,6 +118,8 @@
     3.按照命名空间格式创建目录 比如我命名空间是io.github.chichengyu，完整目录结构为：D:\1111\io\github\chichengyu\mqtt-tool-spring-boot-starter\1.2.1，再把步骤1生成的target文件复制过来
     4.将整个文件生成 mqtt-tool-spring-boot-starter.zip包
     5.登陆 https://central.sonatype.com/publishing 捆绑上传：名称格式：io.github.chichengyu:mqtt-tool-spring-boot-starter:1.2.1，然后上传mqtt-tool-spring-boot-starter.zip
+
+    2026.01.05参考文档：https://cloud.tencent.com/developer/article/2431924
     -->
     <build>
         <plugins>
@@ -180,6 +182,16 @@
                 </executions>
             </plugin>
             <plugin>
+                <groupId>org.sonatype.central</groupId>
+                <artifactId>central-publishing-maven-plugin</artifactId>
+                <version>0.4.0</version>
+                <extensions>true</extensions>
+                <configuration>
+                    <publishingServerId>ossrh</publishingServerId>
+                    <tokenAuth>true</tokenAuth>
+                </configuration>
+            </plugin>
+            <!--<plugin>
                 <groupId>org.sonatype.plugins</groupId>
                 <artifactId>nexus-staging-maven-plugin</artifactId>
                 <version>1.6.7</version>
@@ -189,7 +201,7 @@
                     <nexusUrl>https://s01.oss.sonatype.org/</nexusUrl>
                     <autoReleaseAfterClose>true</autoReleaseAfterClose>
                 </configuration>
-            </plugin>
+            </plugin>-->
         </plugins>
     </build>
 </project>
