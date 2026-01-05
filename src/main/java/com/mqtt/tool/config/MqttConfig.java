@@ -3,6 +3,8 @@ package com.mqtt.tool.config;
 import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 
 import java.util.Properties;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 
 public class MqttConfig{
 
@@ -80,6 +82,11 @@ public class MqttConfig{
      * 版本 默认 MqttConnectOptions.MQTT_VERSION_3_1_1
      */
     private int version = MqttConnectOptions.MQTT_VERSION_3_1_1;
+
+    /**
+     * 线程池
+     */
+    private Executor executor = null;
 
     public String getHost() {
         return host;
@@ -199,5 +206,13 @@ public class MqttConfig{
 
     public void setVersion(int version) {
         this.version = version;
+    }
+
+    public Executor getExecutor() {
+        return executor;
+    }
+
+    public void setExecutor(Executor executor) {
+        this.executor = executor;
     }
 }

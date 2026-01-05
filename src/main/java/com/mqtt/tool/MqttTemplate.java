@@ -77,7 +77,7 @@ public class MqttTemplate extends MqttTemplateImpl {
         try {
             if (!messageBody.isRawDataSend()){
                 String chainID = MqttConttext.get();
-                if(MqttConttext.get() == null) {
+                if(chainID == null) {
                     chainID = UUIDUtils.getUUID();
                 }
                 messageBody.setChainID(chainID);

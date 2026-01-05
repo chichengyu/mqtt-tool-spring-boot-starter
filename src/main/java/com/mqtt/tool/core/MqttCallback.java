@@ -7,6 +7,7 @@ import com.mqtt.tool.MqttTemplate;
 import com.mqtt.tool.annotation.MqttTopic;
 import com.mqtt.tool.body.MessageBody;
 import com.mqtt.tool.config.ContextConfig;
+import com.mqtt.tool.util.MqttTopicMatcher;
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.MqttCallbackExtended;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
@@ -16,7 +17,11 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executor;
 
 public class MqttCallback implements MqttCallbackExtended {
     private static Logger LOGGER = LoggerFactory.getLogger(MqttCallback.class);
@@ -76,18 +81,23 @@ public class MqttCallback implements MqttCallbackExtended {
      */
     @Override
     public void messageArrived(String topic, MqttMessage message) throws Exception {
-        String msgContent = new String(message.getPayload());//获取emq发过来的消息体
-        LOGGER.info("messageArrived==>Topic:{},Id:{},Qos:{},Retained:{},Message:{}",topic,message.getId(),message.getQos(),message.isRetained(),msgContent);
+        String payload = new String(message.getPayload());//获取emq发过来的消息体
+        LOGGER.info("messageArrived==>Topic:{},Id:{},Qos:{},Retained:{},Message:{}",topic,message.getId(),message.getQos(),message.isRetained(),payload);
         if (handlerContainer.containsKey(topic)){
-            try {
-                IMqttTopicMessageHandler<Object> targetClass = handlerContainer.get(topic);
-                Class<?> genericClass = getGenericClass(targetClass);// 获取泛型
-                Object body = coverBody(msgContent, genericClass);
-                targetClass.messageArrived(topic, body, message); //执行处理消息的逻辑
-            } catch (Exception e) {
-                LOGGER.error("Message distribution failed,{}",e);
-            } finally {
-                MqttConttext.remove();
+            if (MqttTemplate.getMqttConfig().getExecutor() != null){
+                CompletableFuture.runAsync(() -> sendMessageArrived(handlerContainer.get(topic),topic, message, payload),MqttTemplate.getMqttConfig().getExecutor());
+            }else {
+                sendMessageArrived(handlerContainer.get(topic),topic, message, payload);
+            }
+        }else {
+            Executor executor = MqttTemplate.getMqttConfig().getExecutor();
+            Map<String, IMqttTopicMessageHandler<Object>> sendTopicMap = getSendTopic(topic);
+            for (Map.Entry<String, IMqttTopicMessageHandler<Object>> entry : sendTopicMap.entrySet()) {
+                if (executor != null){
+                    CompletableFuture.runAsync(() -> sendMessageArrived(entry.getValue(), entry.getKey(), message, payload), executor);
+                }else {
+                    sendMessageArrived(entry.getValue(), entry.getKey(), message, payload);
+                }
             }
         }
     }
@@ -105,15 +115,32 @@ public class MqttCallback implements MqttCallbackExtended {
             String[] topics = iMqttDeliveryToken.getTopics();
             LOGGER.info("deliveryComplete[topic:{}] action has finished:{}",topics[0],iMqttDeliveryToken.isComplete());
             MqttMessage mqttMessage = iMqttDeliveryToken.getMessage();
+            Executor executor = MqttTemplate.getMqttConfig().getExecutor();
             if(mqttMessage != null){
                 String payload = new String(mqttMessage.getPayload());
                 LOGGER.info("deliveryComplete==>Topic:{},Id:{},Qos:{},Retained:{},Message:{}",topics[0],mqttMessage.getId(),mqttMessage.getQos(),mqttMessage.isRetained(),payload);
                 if (handlerContainer.containsKey(topics[0])){
+                    if (executor != null){
+                        CompletableFuture.runAsync(() -> sendDeliveryComplete(handlerContainer.get(topics[0]), iMqttDeliveryToken, topics[0], payload), executor);
+                    }else {
+                        sendDeliveryComplete(handlerContainer.get(topics[0]), iMqttDeliveryToken, topics[0], payload);
+                    }
+                }else {
+                    Map<String, IMqttTopicMessageHandler<Object>> sendTopicMap = getSendTopic(topics[0]);
+                    for (Map.Entry<String, IMqttTopicMessageHandler<Object>> entry : sendTopicMap.entrySet()) {
+                        if (executor != null){
+                            CompletableFuture.runAsync(() -> sendDeliveryComplete(entry.getValue(), iMqttDeliveryToken, topics[0], payload), executor);
+                        }else {
+                            sendDeliveryComplete(entry.getValue(), iMqttDeliveryToken, topics[0], payload);
+                        }
+                    }
+                }
+                /*if (handlerContainer.containsKey(topics[0])){
                     IMqttTopicMessageHandler<Object> targetClass = handlerContainer.get(topics[0]);
                     Class<?> genericClass = getGenericClass(targetClass);// 获取泛型
                     Object body = coverBody(payload, genericClass);
                     targetClass.deliveryComplete(topics[0], body,iMqttDeliveryToken);
-                }
+                }*/
             }else{
                 LOGGER.info("deliveryComplete[topic:{}]:mqttMessage=null",topics[0]);
             }
@@ -176,6 +203,84 @@ public class MqttCallback implements MqttCallbackExtended {
             return true;
         }else{
             return false;
+        }
+    }
+
+    /**
+     * 获取topic
+     * @param topic
+     * @return
+     */
+    private String getTopic(String topic) {
+        if (topic == null || "".equals(topic)){
+            return "";
+        }
+        for (String t : handlerContainer.keySet()) {
+            if (MqttTopicMatcher.match(t, topic)) {
+                return t;
+            }
+        }
+        return "";
+    }
+
+    /**
+     * 获取topic
+     * @param topic
+     * @return
+     */
+    private Map<String,IMqttTopicMessageHandler<Object>> getSendTopic(String topic) {
+        Map<String, IMqttTopicMessageHandler<Object>> sendMap = new HashMap<>();
+        if (topic == null || "".equals(topic)){
+            return sendMap;
+        }
+        for (String t : handlerContainer.keySet()) {
+            if (MqttTopicMatcher.match(t, topic)) {
+                sendMap.put(t, handlerContainer.get(t));
+            }
+        }
+        return sendMap;
+    }
+
+    /**
+     * 发送消息
+     * @param targetClass
+     * @param topic
+     * @param message
+     * @param msgContent
+     */
+    private void sendMessageArrived(IMqttTopicMessageHandler<Object> targetClass,String topic, MqttMessage message, String msgContent) {
+        try {
+            Class<?> genericClass = getGenericClass(targetClass);// 获取泛型
+            Object body = msgContent;
+            if (JSON.isValid(msgContent)){
+                body = coverBody(msgContent, genericClass);
+            }
+            targetClass.messageArrived(topic, body, message); //执行处理消息的逻辑
+        } catch (Exception e) {
+            LOGGER.error("Message distribution failed,[topic:{}],{}", topic,e);
+        } finally {
+            MqttConttext.remove();
+        }
+    }
+
+    /**
+     * 发送消息完成DeliveryComplete
+     * @param iMqttDeliveryToken
+     * @param topic
+     * @param payload
+     * @return
+     * @throws IOException
+     */
+    private void sendDeliveryComplete(IMqttTopicMessageHandler<Object> targetClass,IMqttDeliveryToken iMqttDeliveryToken, String topic, String payload){
+        try {
+            Class<?> genericClass = getGenericClass(targetClass);// 获取泛型
+            Object body = payload;
+            if (JSON.isValid(payload)){
+                body = coverBody(payload, genericClass);
+            }
+            targetClass.deliveryComplete(topic, body, iMqttDeliveryToken);
+        } catch (Exception e) {
+            LOGGER.error("Message sendDeliveryComplete failed,[topic:{}],{}", topic,e);
         }
     }
 }
